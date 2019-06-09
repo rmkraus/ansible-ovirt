@@ -62,6 +62,7 @@
         state: present
         storage_domain: data
         size: 20GiB
+        wait: yes
       loop: "{{ range(0, count|int)|list }}"
       loop_control:
         label: "{{ name_template }}"
@@ -73,7 +74,7 @@
           password: "{{ ovirt_password }}"
           url: "{{ ovirt_url }}"
           insecure: yes
-        state: present
+        state: running
         name: "{{ name_template }}"
         boot_devices:
           - network
@@ -100,6 +101,7 @@
             name: vnic0
             profile_name: ovirtmgmt
         operating_system: "{{ vm_os }}"
+        wait: yes
       loop: "{{ range(0, count|int)|list }}"
       loop_control:
         label: "{{ name_template }}"
