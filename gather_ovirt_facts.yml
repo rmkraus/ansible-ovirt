@@ -1,0 +1,49 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Gather RHV Facts
+  hosts: all
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+    type2profile:
+      rhel_6: 'rhel-6-i386'
+      rhel_6x64: 'rhel-6-x86_64'
+      rhel_7x64: 'rhel-7-x86_64'
+      rhel_8x64: 'rhel-8-x86_64'
+    default_profile: 'live-tinycore'
+
+  tasks:
+    - name: query RHV for host information
+      ovirt_vm_facts:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        pattern: "id={{ id }}"
+        fetch_nested: no
+      register: ovirt_vm_cache
+      delegate_to: localhost
+
+    - name: query RHV for primary NIC information
+      ovirt_nic_facts:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        vm: "{{ ovirt_vm_cache.ansible_facts.ovirt_vms.0.name }}"
+        fetch_nested: no
+      register: ovirt_nics_cache
+      delegate_to: localhost
+      ignore_errors: yes
+
+    - name: cache VM details
+      set_fact:
+        mac_address: "{{ ovirt_nics_cache.ansible_facts.ovirt_nics.0.mac.address }}"
+        pxe_profile: "{{ type2profile[ovirt_vm_cache.ansible_facts.ovirt_vms.0.os.type] | default(default_profile) }}"
+        cacheable: yes
