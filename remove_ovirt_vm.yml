@@ -1,0 +1,23 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Remove oVirt Virtual Machine
+  hosts: all
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+
+  tasks:
+    - name: remove virtual machine
+      ovirt_vm:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        state: absent
+        id: "{{ id }}"
+      delegate_to: localhost
