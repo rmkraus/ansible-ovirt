@@ -1,6 +1,6 @@
 #!/usr/bin/ansible-playbook
 ---
-- name: Gather RHV Facts
+- name: Gather oVirt Facts
   hosts: localhost
   gather_facts: no
   become: no

@@ -1,6 +1,6 @@
 #!/usr/bin/ansible-playbook
 ---
-- name: Gather RHV Facts
+- name: Gather oVirt Facts
   hosts: all
   gather_facts: no
   become: no
@@ -17,7 +17,7 @@
     default_profile: 'live-tinycore'
 
   tasks:
-    - name: query RHV for host information
+    - name: query oVirt for host information
       ovirt_vm_facts:
         auth:
           username: "{{ ovirt_username }}"
@@ -29,7 +29,7 @@
       register: ovirt_vm_cache
       delegate_to: localhost
 
-    - name: query RHV for primary NIC information
+    - name: query oVirt for primary NIC information
       ovirt_nic_facts:
         auth:
           username: "{{ ovirt_username }}"
