@@ -1,6 +1,6 @@
 #!/usr/bin/ansible-playbook
 ---
-- name: Gather oVirt Facts
+- name: Create oVirt Virtual Machine
   hosts: localhost
   gather_facts: no
   become: no
