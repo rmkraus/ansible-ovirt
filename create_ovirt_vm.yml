@@ -57,7 +57,6 @@
           insecure: yes
         activate: yes
         bootable: yes
-        content_type: data
         format: cow
         interface: virtio
         name: "{{ name_template }}_Disk1"
