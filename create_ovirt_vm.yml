@@ -55,9 +55,7 @@
           password: "{{ ovirt_password }}"
           url: "{{ ovirt_url }}"
           insecure: yes
-        activate: yes
         bootable: yes
-        content_type: data
         format: cow
         interface: virtio
         name: "{{ name_template }}_Disk1"
