@@ -1,0 +1,79 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Create oVirt Virtual Machine
+  hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+    templates:
+      xsmall:
+        cpu_cores: 2
+        memory: 2GiB
+      small:
+        cpu_cores: 2
+        memory: 4GiB
+      medium:
+        cpu_cores: 4
+        memory: 4GiB
+      large:
+        cpu_cores: 4
+        memory: 8GiB
+      xlarge:
+        cpu_cores: 8
+        memory: 8GiB
+
+  vars_prompt:
+    - name: vm_name
+      prompt: Name
+      type: string
+      default: test
+    - name: vm_template
+      prompt: Template
+      type: string
+      default: xsmall
+    - name: vm_os
+      prompt: Template
+      type: string
+      default: rhel_7x64
+    - name: count
+      prompt: Count
+      default: 1
+
+  tasks:
+    - name: determine vm naming convention
+      set_fact:
+        name_template: "{% if count|int == 1 %}{% raw %}{{ vm_name }}{% endraw %}{% else %}{% raw %}{{ vm_name }}-{{ item }}{% endraw %}{% endif %}"
+
+    - name: remove virtual machine
+      ovirt_vm:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        state: absent
+        name: "{{ name_template }}"
+        wait: yes
+      ignore_errors: yes
+      loop: "{{ range(0, count|int)|list }}"
+      loop_control:
+        label: "{{ name_template }}"
+
+    - name: remove virtual disk
+      ovirt_disk:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        name: "{{ name_template }}_Disk1"
+        state: absent
+        wait: yes
+      ignore_errors: yes
+      loop: "{{ range(0, count|int)|list }}"
+      loop_control:
+        label: "{{ name_template }}"
