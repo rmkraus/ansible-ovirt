@@ -1,7 +1,7 @@
 #!/usr/bin/ansible-playbook
 ---
 - name: Restart oVirt Virtual Machine
-  hosts: "{{ new_machines|default('all') }}"
+  hosts: "{{ stat_limit|default('all') }}"
   gather_facts: no
   become: no
 

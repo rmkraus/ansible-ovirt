@@ -110,5 +110,5 @@
     - name: save new vm list for future use (tower only)
       set_stats:
         data:
-          new_machines: "{% for vm in new_vms.results %}{{ vm.invocation.module_args.name }},{% endfor %}"
+          stat_limit: "{% for vm in new_vms.results %}{{ vm.invocation.module_args.name }},{% endfor %}"
       when: awx_job_id is defined
