@@ -1,7 +1,7 @@
 #!/usr/bin/ansible-playbook
 ---
 - name: Remove oVirt Virtual Machine
-  hosts: all
+  hosts: "{{ stat_limit|default('all') }}"
   gather_facts: no
   become: no
 
