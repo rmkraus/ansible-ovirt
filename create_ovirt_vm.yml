@@ -81,7 +81,7 @@
           - hd
         boot_menu: no
         cluster: Default
-        comment: "Created by Ansible"
+        comment: "Created by Ansible for {{ awx_user_name|default('NA') }} per Job #{{ awx_job_id|default('NA') }}"
         graphical_console:
           headless_mode: no
           protocol: vnc
@@ -105,3 +105,10 @@
       loop: "{{ range(0, count|int)|list }}"
       loop_control:
         label: "{{ name_template }}"
+      register: new_vms
+
+    - name: save new vm list for future use (tower only)
+      set_stats:
+        data:
+          new_machines: "{% for vm in new_vms.results %}{{ vm.invocation.module_args.name }},{% endfor %}"
+      when: awx_job_id is defined
