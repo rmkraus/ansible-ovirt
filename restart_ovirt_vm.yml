@@ -19,6 +19,7 @@
           url: "{{ ovirt_url }}"
           insecure: yes
         state: stopped
+        force: "{{ force_restart | default(False) }}"
         id: "{{ id }}"
       delegate_to: localhost
 
