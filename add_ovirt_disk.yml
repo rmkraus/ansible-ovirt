@@ -1,0 +1,40 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Create oVirt Virtual Machine
+  hosts: all
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+
+  vars_prompt:
+    - name: size
+      prompt: Size (G1B)
+      default: 10
+    - name: num
+      prompt: Disk Number
+      default: "2"
+      type: string
+
+  tasks:
+    - name: create virtual disk
+      ovirt_disk:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        bootable: no
+        format: cow
+        interface: virtio
+        name: "{{ inventory_hostname }}_Disk{{ num|string }}"
+        state: present
+        storage_domain: data
+        size: "{{ size|string }}GiB"
+        vm_id: "{{ id }}"
+        wait: yes
+      delegate_to: localhost
+
