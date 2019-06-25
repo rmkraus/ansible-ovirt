@@ -27,6 +27,7 @@
           password: "{{ ovirt_password }}"
           url: "{{ ovirt_url }}"
           insecure: yes
+        activate: yes
         bootable: no
         format: cow
         interface: virtio
