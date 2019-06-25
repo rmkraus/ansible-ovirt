@@ -1,0 +1,35 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Create limit from vm request
+  hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+
+  vars_prompt:
+    - name: vm_name
+      prompt: Name
+      type: string
+      default: test
+    - name: vm_template
+      prompt: Template
+      type: string
+      default: xsmall
+    - name: vm_os
+      prompt: Template
+      type: string
+      default: rhel_7x64
+    - name: count
+      prompt: Count
+      default: 1
+
+  tasks:
+    - name: save new vm list for future use (tower only)
+      set_stats:
+        data:
+          stat_limit: "{% if count|int == 1 %}{{ vm_name }}{% else %}{% for item in range(0, count|int) %}{{ vm_name }}-{{ item }}, {% endfor %}{% endif %}"
+      when: awx_job_id is defined
