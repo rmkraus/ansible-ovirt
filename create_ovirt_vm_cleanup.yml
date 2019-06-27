@@ -9,34 +9,18 @@
     ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
     ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
     ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
-    templates:
-      xsmall:
-        cpu_cores: 2
-        memory: 2GiB
-      small:
-        cpu_cores: 2
-        memory: 4GiB
-      medium:
-        cpu_cores: 4
-        memory: 4GiB
-      large:
-        cpu_cores: 4
-        memory: 8GiB
-      xlarge:
-        cpu_cores: 8
-        memory: 8GiB
 
   vars_prompt:
     - name: vm_name
       prompt: Name
       type: string
       default: test
-    - name: vm_template
-      prompt: Template
+    - name: vm_size
+      prompt: Size
       type: string
       default: xsmall
     - name: vm_os
-      prompt: Template
+      prompt: OS
       type: string
       default: rhel_7x64
     - name: count
