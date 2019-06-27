@@ -1,0 +1,89 @@
+#!/usr/bin/ansible-playbook
+---
+- name: Create oVirt Virtual Machine
+  hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+    size_templates:
+      xsmall:
+        cpu_cores: 2
+        memory: 2GiB
+      small:
+        cpu_cores: 2
+        memory: 4GiB
+      medium:
+        cpu_cores: 4
+        memory: 4GiB
+      large:
+        cpu_cores: 4
+        memory: 8GiB
+      xlarge:
+        cpu_cores: 8
+        memory: 8GiB
+
+  vars_prompt:
+    - name: vm_name
+      prompt: Name
+      type: string
+      default: test
+    - name: vm_size
+      prompt: Size
+      type: string
+      default: small
+    - name: vm_image
+      prompt: Template Image
+      type: string
+      default: rhel7
+    - name: count
+      prompt: Count
+      default: 1
+
+  tasks:
+    - name: determine vm naming convention
+      set_fact:
+        name_template: "{% if count|int == 1 %}{% raw %}{{ vm_name }}{% endraw %}{% else %}{% raw %}{{ vm_name }}-{{ item }}{% endraw %}{% endif %}"
+
+    - name: create virtual machine
+      ovirt_vm:
+        auth:
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          url: "{{ ovirt_url }}"
+          insecure: yes
+        state: running
+        cluster: Default
+        name: "{{ name_template }}"
+        clone: yes
+        template: "template_{{ vm_image }}"
+        comment: "Created by Ansible for {{ awx_user_name|default('NA') }} per Job #{{ awx_job_id|default('NA') }}"
+        cpu_cores: "{{ size_templates[vm_size].cpu_cores }}"
+        memory: "{{ size_templates[vm_size].memory }}"
+        disk_format: cow
+        storage_domain: data
+        wait: yes
+      loop: "{{ range(0, count|int)|list }}"
+      loop_control:
+        label: "{{ name_template }}"
+      register: new_vms
+
+    - name: wait for ip to be registered by ovirt engine
+      ovirt_vm:
+        name: "{{ name_template }}"
+      loop: "{{ range(0, count|int)|list }}"
+      loop_control:
+        label: "{{ name_template }}"
+      until: "vm_check.vm.display.address | default('') != ''"
+      retries: 12
+      delay: 5
+      register: vm_check
+
+    - name: save new vm list for future use (tower only)
+      set_stats:
+        data:
+          stat_limit: "{% for vm in new_vms.results %}{{ vm.invocation.module_args.name }},{% endfor %}"
+      when: awx_job_id is defined
