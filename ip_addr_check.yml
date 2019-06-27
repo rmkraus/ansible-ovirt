@@ -1,0 +1,11 @@
+- name: wait for ip to be registered by ovirt engine - {{ name_template }}
+  ovirt_nic_facts:
+    vm: "{{ name_template }}"
+  until: "vm_check.ansible_facts.ovirt_nics.0.reported_devices.0.ips.0.address | default('') | ipaddr"
+  retries: 12
+  delay: 5
+  register: vm_check
+
+- name: print ip address - {{ name_template }}
+  debug:
+    msg: vm_check.ansible_facts.ovirt_nics.0.reported_devices.0.ips.0.address

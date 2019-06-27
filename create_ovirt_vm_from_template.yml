@@ -83,15 +83,10 @@
         label: "{{ item.0.invocation.module_args.name }} - {{ item.1 }}"
 
     - name: wait for ip to be registered by ovirt engine
-      ovirt_vm:
-        name: "{{ name_template }}"
+      include_tasks: ip_addr_check.yml
       loop: "{{ range(0, count|int)|list }}"
       loop_control:
         label: "{{ name_template }}"
-      until: "vm_check.vm.display.address | default('') != ''"
-      retries: 12
-      delay: 5
-      register: vm_check
 
     - name: save new vm list for future use (tower only)
       set_stats:
