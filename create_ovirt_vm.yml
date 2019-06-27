@@ -9,7 +9,7 @@
     ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
     ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
     ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
-    templates:
+    size_templates:
       xsmall:
         cpu_cores: 2
         memory: 2GiB
@@ -31,12 +31,12 @@
       prompt: Name
       type: string
       default: test
-    - name: vm_template
-      prompt: Template
+    - name: vm_size
+      prompt: Size
       type: string
       default: xsmall
     - name: vm_os
-      prompt: Template
+      prompt: OS
       type: string
       default: rhel_7x64
     - name: count
@@ -87,8 +87,8 @@
           protocol: vnc
         high_availability: yes
         type: server
-        cpu_cores: "{{ templates[vm_template].cpu_cores }}"
-        memory: "{{ templates[vm_template].memory }}"
+        cpu_cores: "{{ size_templates[vm_size].cpu_cores }}"
+        memory: "{{ size_templates[vm_size].memory }}"
         disk_format: cow
         disks:
           - activate: yes

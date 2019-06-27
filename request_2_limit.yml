@@ -15,12 +15,12 @@
       prompt: Name
       type: string
       default: test
-    - name: vm_template
-      prompt: Template
+    - name: vm_size
+      prompt: Size
       type: string
       default: xsmall
     - name: vm_os
-      prompt: Template
+      prompt: OS
       type: string
       default: rhel_7x64
     - name: count
