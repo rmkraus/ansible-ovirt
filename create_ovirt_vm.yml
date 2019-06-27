@@ -25,6 +25,7 @@
       xlarge:
         cpu_cores: 8
         memory: 8GiB
+    vm_tags_safe: "{{ vm_tags | default([]) + ['ansible_managed'] }}"
 
   vars_prompt:
     - name: vm_name
@@ -106,6 +107,16 @@
       loop_control:
         label: "{{ name_template }}"
       register: new_vms
+
+    - name: ensure vms are tagged
+      ovirt_tag:
+        name: "{{ item.1 }}"
+        state: attached
+        vms:
+          - "{{ item.0.invocation.module_args.name }}"
+      loop: "{{ new_vms.results | product(vm_tags_safe) | list }}"
+      loop_control:
+        label: "{{ item.0.invocation.module_args.name }} - {{ item.1 }}"
 
     - name: save new vm list for future use (tower only)
       set_stats:
