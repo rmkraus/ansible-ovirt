@@ -5,7 +5,3 @@
   retries: 12
   delay: 5
   register: vm_check
-
-- name: print ip address - {{ name_template }}
-  debug:
-    msg: vm_check.ansible_facts.ovirt_nics.0.reported_devices.0.ips.0.address
