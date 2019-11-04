@@ -1,0 +1,121 @@
+#!/usr/bin/ansible-playbook
+- name: patch the cluster hosts
+  hosts: "hosts"
+  gather_facts: no
+  become: yes
+  serial: 1
+  any_errors_fatal: yes
+
+  vars:
+    ovirt_url: "{{ lookup('env', 'OVIRT_URL') }}"
+    ovirt_username: "{{ lookup('env', 'OVIRT_USERNAME') }}"
+    ovirt_password: "{{ lookup('env', 'OVIRT_PASSWORD') }}"
+    rhvh_package: redhat-virtualization-host-image-update
+
+  tasks:
+    - name: check if updates are available
+      yum: 
+        name: "{{ rhvh_package }}"
+        state: latest
+      check_mode: yes
+      register: update_check
+
+    - name: apply updates to host
+      when: update_check is changed
+      block:
+
+      - name: wait for gluster to be healthy
+        glfs_health_check:
+        register: health_check
+        until: health_check is success
+        delay: 10
+        retries: 360
+
+      - name: put the node into maintenance
+        ovirt_host:
+          auth:
+            username: "{{ ovirt_username }}"
+            password: "{{ ovirt_password }}"
+            url: "{{ ovirt_url }}"
+            insecure: yes
+          state: maintenance
+          name: "{{ inventory_hostname }}"
+          timeout: 3600
+        delegate_to: localhost
+        become: no
+
+      - name: ensure no virtual machines are running
+        shell: /bin/killall -0 /usr/libexec/qemu-kvm
+        register: kvm_check
+        failed_when: kvm_check.rc == 0
+        changed_when: False
+        until: kvm_check is success
+        delay: 5
+        retries: 720
+
+      - name: update the host
+        ovirt_host:
+          auth:
+            username: "{{ ovirt_username }}"
+            password: "{{ ovirt_password }}"
+            url: "{{ ovirt_url }}"
+            insecure: yes
+          state: upgraded
+          name: "{{ inventory_hostname }}"
+          timeout: 3600
+        delegate_to: localhost
+        become: no
+
+      - name: ensure host is reachable
+        wait_for_connection:
+          sleep: 10
+          timeout: 180
+
+      - name: remove the host from maintenance
+        ovirt_host:
+          auth:
+            username: "{{ ovirt_username }}"
+            password: "{{ ovirt_password }}"
+            url: "{{ ovirt_url }}"
+            insecure: yes
+          state: present
+          name: "{{ inventory_hostname }}"
+        delegate_to: localhost
+        become: no
+
+      - name: ensure gluster daemon is back online
+        block:
+        - name: health check glfs bricks
+          glfs_health_check:
+            check_split_brain: False
+          register: health_check
+          until: health_check is success
+          delay: 10
+          retries: 5
+        
+        rescue:
+        - name: restart glfs daemon if needed
+          service:
+            name: glusterd
+            state: restarted
+          when: health_check is failure
+
+        - name: let daemon restart
+          pause: 
+            seconds: 15
+
+        - name: health check glfs bricks
+          glfs_health_check:
+            check_split_brain: False
+          register: health_check
+          until: health_check is success
+          delay: 10
+          retries: 5
+
+      - name: wait for split brain files to be resolved
+        glfs_health_check:
+          check_bricks: False
+        register: health_check
+        until: health_check is success
+        delay: 10
+        retries: 360

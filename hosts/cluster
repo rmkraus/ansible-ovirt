@@ -1,0 +1,8 @@
+[manager]
+rhv.lab.rmkra.us
+
+[hosts]
+host-0.lab.rmkra.us
+host-1.lab.rmkra.us
+host-2.lab.rmkra.us
+host-3.lab.rmkra.us

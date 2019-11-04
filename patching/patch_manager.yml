@@ -1,0 +1,68 @@
+#!/usr/bin/ansible-playbook
+- name: patch the virtualization manager
+  hosts: "manager"
+  gather_facts: no
+  become: yes
+  serial: 1
+  any_errors_fatal: yes
+
+  tasks:
+    - name: check for engine upgrades
+      shell: /bin/engine-upgrade-check
+      ignore_errors: yes
+      register: upgrade_check
+      changed_when: upgrade_check.rc == 0
+      failed_when: False
+
+    - name: check for os upgrades
+      yum:
+        name: '*'
+        state: latest
+      check_mode: yes
+      register: yum_check
+
+    - name: turn on global maintenance
+      shell: "/usr/sbin/hosted-engine --set-maintenance --mode=global"
+      delegate_to: "{{ groups.hosts[0] }}"
+      when: yum_check is changed or upgrade_check is changed
+
+    - name: upgrade the manager setup tools
+      yum:
+        name: 'ovirt*setup*'
+        state: latest
+      when: upgrade_check is changed
+
+    - name: run the ovirt engine setup
+      shell: /bin/engine-setup --accept-defaults
+      when: upgrade_check is changed
+
+    - name: update the base operating system
+      yum:
+        name: '*'
+        state: latest
+      register: yum_update
+      when: yum_check is changed
+
+    - include_role: 
+        name: reboot_manager
+      vars:
+        delegate: "{{ groups.hosts[0] }}" 
+      when: 
+        - yum_check is changed
+        - yum_update is changed
+
+    - name: turn off global maintenance
+      shell: "/usr/sbin/hosted-engine --set-maintenance --mode=none"
+      delegate_to: "{{ groups.hosts[0] }}"
+      when: yum_check is changed or upgrade_check is changed
+
+    - name: wait for the admin console to respond
+      uri:
+        url: "https://{{ inventory_hostname }}/ovirt-engine/"
+        follow_redirects: no
+        status_code: 302
+      delegate_to: localhost
+      register: mgr_console_ping
+      until: mgr_console_ping is success
+      retries: 360
+      delay: 10

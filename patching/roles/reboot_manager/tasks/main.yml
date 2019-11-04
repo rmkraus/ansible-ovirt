@@ -1,0 +1,28 @@
+- name: reboot the management node
+  delegate_to: "{{ delegate }}"
+  block:
+  - name: shutdown the manager
+    shell: "/usr/sbin/hosted-engine --vm-shutdown"
+    run_once: True
+    ignore_errors: True
+
+  - name: wait for manager to shutdown
+    shell: "/usr/sbin/hosted-engine --check-liveliness"
+    run_once: True
+    register: mgr_shutdown
+    failed_when: mgr_shutdown.rc == 0
+    until: not mgr_shutdown is failed
+    retries: 360
+    delay: 10
+
+  - name: power on the manager
+    shell: "/usr/sbin/hosted-engine --vm-start"
+    run_once: True
+
+  - name: wait for manager to power on
+    shell: "/usr/sbin/hosted-engine --check-liveliness"
+    run_once: True
+    register: mgr_shutdown
+    until: not mgr_shutdown is failed
+    retries: 360
+    delay: 10
