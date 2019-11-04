@@ -43,11 +43,11 @@
       register: yum_update
       when: yum_check is changed
 
-    - include_role: 
+    - include_role:
         name: reboot_manager
       vars:
-        delegate: "{{ groups.hosts[0] }}" 
-      when: 
+        delegate: "{{ groups.hosts[0] }}"
+      when:
         - yum_check is changed
         - yum_update is changed
 
@@ -62,6 +62,7 @@
         follow_redirects: no
         status_code: 302
       delegate_to: localhost
+      become: no
       register: mgr_console_ping
       until: mgr_console_ping is success
       retries: 360
