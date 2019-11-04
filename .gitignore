@@ -1,5 +1,8 @@
 *.pyo
+*.pyc
+__pycache__
 *.retry
 *.swp
 tmp
 secrets.sh
+.cache
