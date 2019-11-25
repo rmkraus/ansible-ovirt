@@ -1,11 +1,9 @@
+- name: shutdown the manager
+  shell: /sbin/shutdown -h 1
+
 - name: reboot the management node
   delegate_to: "{{ delegate }}"
   block:
-  - name: shutdown the manager
-    shell: "/usr/sbin/hosted-engine --vm-shutdown"
-    run_once: True
-    ignore_errors: True
-
   - name: wait for manager to shutdown
     shell: "/usr/sbin/hosted-engine --check-liveliness"
     run_once: True
