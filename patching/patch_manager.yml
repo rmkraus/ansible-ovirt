@@ -36,6 +36,9 @@
       shell: /bin/engine-setup --accept-defaults
       when: upgrade_check is changed
 
+    - name: refresh rhsm certificates
+      shell: /usr/sbin/subscription-manager refresh
+
     - name: update the base operating system
       yum:
         name: '*'

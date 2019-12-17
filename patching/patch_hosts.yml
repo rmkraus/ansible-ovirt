@@ -53,6 +53,9 @@
         delay: 5
         retries: 720
 
+      - name: refresh rhsm certificates
+        shell: /usr/sbin/subscription-manager refresh
+
       - name: update the host
         ovirt_host:
           auth:
