@@ -41,6 +41,8 @@
           state: maintenance
           name: "{{ inventory_hostname }}"
           timeout: 3600
+        delay: 10
+        retries: 100
         delegate_to: localhost
         become: no
 
