@@ -1,0 +1,158 @@
+#!/usr/bin/ansible-playbook
+---
+- name: update rhv ssl certificates
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  vars_prompt:
+    - name: cert_name
+      private: no
+      type: string
+      prompt: Certificate Name
+    - name: s3_keys_bucket
+      private: no
+      type: string
+      prompt: S3 Bucket Name
+
+  tasks:
+
+    - debug:
+        msg: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+
+    - name: create local temp working directory
+      tempfile:
+        state: directory
+      delegate_to: localhost
+      become: no
+      register: tmp_dir
+      check_mode: no
+
+    - name: fetch custom ssl certificates from bucket
+      aws_s3:
+        bucket: "{{ s3_keys_bucket }}"
+        object: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: get
+      loop:
+        - src: "{{ cert_name }}/cert.pem"
+          dest: "{{ tmp_dir.path }}/cert.pem"
+        - src: "{{ cert_name }}/privkey.pem"
+          dest: "{{ tmp_dir.path }}/privkey.pem"
+        - src: "{{ cert_name }}/chain.pem"
+          dest: "{{ tmp_dir.path }}/chain.pem"
+      delegate_to: localhost
+      become: no
+      check_mode: no
+
+    - name: save cert locations
+      set_fact:
+        chain: "{{ tmp_dir.path }}/chain.pem"
+        cert: "{{ tmp_dir.path }}/cert.pem"
+        privkey: "{{ tmp_dir.path }}/privkey.pem"
+
+    - name: copy ca cert chain to host
+      copy:
+        src: '{{ chain }}'
+        dest: '{{ item }}'
+        owner: root
+        group: root
+        mode: "0644"
+        backup: yes
+      loop:
+        - /etc/pki/ca-trust/source/anchors/letsencrypt.pem
+        - /etc/pki/ovirt-engine/apache-ca.pem
+      notify:
+        - reload cas
+        - restart httpd
+        - restart ovn
+        - restart engine
+        - restart websocket proxy
+
+    - name: copy private key to host
+      copy:
+        src: '{{ privkey }}'
+        dest: '/etc/pki/ovirt-engine/keys/apache.key.nopass'
+        backup: yes
+        owner: root
+        group: ovirt
+        mode: "0640"
+      notify:
+        - restart httpd
+        - restart ovn
+        - restart engine
+        - restart websocket proxy
+
+    - name: copy public cert to host
+      copy:
+        src: "{{ cert }}"
+        dest: "/etc/pki/ovirt-engine/certs/apache.cer"
+        backup: yes
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - restart httpd
+        - restart ovn
+        - restart engine
+        - restart websocket proxy
+
+    - name: configure truststore settings
+      lineinfile:
+        path: /etc/ovirt-engine/engine.conf.d/99-custom-truststore.conf
+        create: yes
+        line: "{{ item.line }}"
+        regexp: "{{ item.regexp }}"
+      loop:
+        - line: ENGINE_HTTPS_PKI_TRUST_STORE="/etc/pki/java/cacerts"
+          regexp: ^ENGINE_HTTPS_PKI_TRUST_STORE=
+        - line: ENGINE_HTTPS_PKI_TRUST_STORE_PASSWORD=""
+          regexp: ^ENGINE_HTTPS_PKI_TRUST_STORE_PASSWORD=
+      loop_control:
+        label: "{{ item.line }}"
+      notify:
+        - restart ovn
+        - restart engine
+
+    - name: configure proxy truststore settings
+      lineinfile:
+        path: /etc/ovirt-engine/ovirt-websocket-proxy.conf.d/10-setup.conf
+        create: yes
+        line: "{{ item.line }}"
+        regexp: "{{ item.regexp }}"
+      loop:
+        - line: SSL_CERTIFICATE=/etc/pki/ovirt-engine/certs/apache.cer
+          regexp: ^SSL_CERTIFICATE=
+        - line: SSL_KEY=/etc/pki/ovirt-engine/keys/apache.key.nopass
+          regexp: ^SSL_KEY=
+      loop_control:
+        label: "{{ item.line }}"
+      notify:
+        - restart websocket proxy
+
+    - name: remove temp working directory
+      file:
+        path: "{{ tmp_dir.path }}"
+        state: absent
+      delegate_to: localhost
+      check_mode: no
+
+  handlers:
+    - name: reload cas
+      shell: update-ca-trust
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
+    - name: restart ovn
+      service:
+        name: ovirt-provider-ovn
+        state: restarted
+    - name: restart engine
+      service:
+        name: ovirt-engine
+        state: restarted
+    - name: restart websocket proxy
+      service:
+        name: ovirt-websocket-proxy
+        state: restarted
