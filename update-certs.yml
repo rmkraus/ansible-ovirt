@@ -135,6 +135,7 @@
         path: "{{ tmp_dir.path }}"
         state: absent
       delegate_to: localhost
+      become: no
       check_mode: no
 
   handlers:
